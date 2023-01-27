@@ -109,3 +109,17 @@ CREATE TABLE staff (
 	"location" VARCHAR(4)
 )
 ;
+
+--unpivot targets table to allow joining to sales table
+SELECT st.sales_outlet_id
+	, u.category
+	, u.goal
+INTO sales_targets_long
+FROM sales_targets st
+	CROSS JOIN LATERAL (
+		VALUES ('Whole Bean/Teas',beans_goal)
+			,('Beverages',beverage_goal)
+			,('Food',food_goal)
+			,('Merchandise',merchandise_goal)
+	) as u(category,goal)
+ORDER BY 1;
