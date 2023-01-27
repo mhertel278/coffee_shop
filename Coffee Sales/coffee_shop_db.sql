@@ -111,6 +111,9 @@ CREATE TABLE staff (
 ;
 
 --unpivot targets table to allow joining to sales table
+--later join code adapted from StackOverflow
+-- https://stackoverflow.com/questions/64268037/unpivot-table-in-postgresql
+-- on 1/26/2023
 SELECT st.sales_outlet_id
 	, u.category
 	, u.goal
