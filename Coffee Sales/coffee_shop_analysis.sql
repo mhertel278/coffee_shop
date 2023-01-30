@@ -91,13 +91,13 @@ FROM pastry_inventory
 WHERE start_of_day = quantity_sold + waste
 ;
 
--- find overall waste perc by product
+-- find overall sell_through perc by product
 
 SELECT i.product_id
 	, p.product
 	, ROUND(SUM(CAST(i.quantity_sold as  NUMERIC))
 		/SUM(CAST(i.quantity_sold as NUMERIC) + CAST(i.waste as NUMERIC)) 
-			* 100, 2) as waste_perc
+			* 100, 2) as sell_through_perc
 FROM pastry_inv_clean i
 JOIN product p
 ON i.product_id = p.product_id
@@ -109,11 +109,35 @@ ORDER BY 3 ASC
 SELECT sales_outlet_id
 	, ROUND(SUM(CAST(quantity_sold as  NUMERIC))
 		/SUM(CAST(quantity_sold as NUMERIC) + CAST(waste as NUMERIC))
-			 * 100, 2) as waste_perc
-FROM pastry_inventory 
+			 * 100, 2) as sell_through_perc
+FROM pastry_inv_clean
 
 GROUP BY 1
 ORDER BY 2 ASC
 ;
+-- find promo dates
+SELECT MIN(transaction_date) AS promo_start
+	, MAX(transaction_date) AS prome_end
+FROM transactions 
+WHERE promo_item_yn = 'Y'
+;
 
--- find waste perc by week for store 3 to see if promo reduced overall waste
+--
+
+with promo_window as (SELECT *, 
+	CASE WHEN transaction_date < '2019-04-15' THEN 'before_promo'
+	ELSE 'during_promo' END as promo_status
+FROM pastry_inv_clean)
+
+SELECT pw.product_id
+	, p.product
+	, pw.promo_status
+	, ROUND(SUM(CAST(pw.quantity_sold as  NUMERIC))
+		/SUM(CAST(pw.quantity_sold as NUMERIC) + CAST(pw.waste as NUMERIC)) 
+			* 100, 2) as sell_through_perc
+FROM promo_window pw
+JOIN product p
+ON pw.product_id = p.product_id 
+GROUP BY 1,2,3
+ORDER BY 1,3
+;
