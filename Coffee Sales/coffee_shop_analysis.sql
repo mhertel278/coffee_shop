@@ -47,6 +47,30 @@ GROUP BY 1
 ORDER BY 3 DESC
 ;
 
+-- top line stats week over week
+-- see weekly sales
+WITH weekly as 
+(SELECT EXTRACT ('week' FROM transaction_date) AS week
+	, COUNT(DISTINCT CONCAT(transaction_id, transaction_date, sales_outlet_id)) as total_transactions
+	, SUM (line_item_amount) as dollars_sold_tot
+	, SUM (quantity) as units_sold_total
+	, SUM (line_item_amount - unit_price) as profit_dollars_total
+FROM transactions
+GROUP BY 1
+ORDER BY 1)
+
+SELECT week
+	, dollars_sold_tot
+	, dollars_sold_tot - LAG (dollars_sold_tot,1) OVER() AS dollars_wow
+	, units_sold_total
+	, units_sold_total - LAG (units_sold_total,1) OVER() AS units_wow
+	, profit_dollars_total
+	, profit_dollars_total - LAG (profit_dollars_total,1) OVER() AS profit_wow
+FROM weekly
+WHERE week != 18
+;
+
+
 /*
 grouping transactions by store and product group to join to
 unpivoted sales goals and calculate the actual vs goal
