@@ -84,6 +84,13 @@ FROM pastry_inventory
 WHERE start_of_day != (quantity_sold + waste)
 ;
 
+-- create cleaned inventory table with anomolies dropped
+SELECT * 
+INTO pastry_inv_clean
+FROM pastry_inventory
+WHERE start_of_day = quantity_sold + waste
+;
+
 -- find overall waste perc by product
 
 SELECT i.product_id
@@ -91,7 +98,7 @@ SELECT i.product_id
 	, ROUND(SUM(CAST(i.quantity_sold as  NUMERIC))
 		/SUM(CAST(i.quantity_sold as NUMERIC) + CAST(i.waste as NUMERIC)) 
 			* 100, 2) as waste_perc
-FROM pastry_inventory i
+FROM pastry_inv_clean i
 JOIN product p
 ON i.product_id = p.product_id
 GROUP BY 1, 2
