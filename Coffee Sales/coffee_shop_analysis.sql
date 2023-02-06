@@ -16,30 +16,34 @@ WHERE row_count > 1
 /*
 High Level Analysis
 */
--- Top line totals
-SELECT COUNT(DISTINCT CONCAT(transaction_id, transaction_date, sales_outlet_id)) as total_transactions
-	, SUM (line_item_amount) as dollars_sold_tot
-	, SUM (quantity) as units_sold_total
-	, SUM (line_item_amount - unit_price) as profit_dollars_total
-FROM transactions
+-- Top line totals CORRECTED
+SELECT COUNT(DISTINCT CONCAT(t.transaction_id, t.transaction_date, t.sales_outlet_id)) as total_transactions
+	, SUM (t.line_item_amount) as dollars_sold_tot
+	, SUM (t.quantity) as units_sold_total
+	, ROUND(SUM (t.line_item_amount - (p.current_wholesale_price * t.quantity))::NUMERIC,2) as profit_dollars_total
+FROM transactions t
+JOIN product p
+ON t.product_id = p.product_id
 ;
---Top line by store
-SELECT sales_outlet_id
-	, COUNT(DISTINCT CONCAT(transaction_id, transaction_date, sales_outlet_id)) as total_transactions
-	, SUM (line_item_amount) as dollars_sold_tot
-	, SUM (quantity) as units_sold_total
-	, SUM (line_item_amount - unit_price) as profit_dollars_total
-FROM transactions
+--Top line by store CORRECTED
+SELECT t.sales_outlet_id 
+	, COUNT(DISTINCT CONCAT(t.transaction_id, t.transaction_date, t.sales_outlet_id)) as total_transactions
+	, SUM (t.line_item_amount) as dollars_sold_tot
+	, SUM (t.quantity) as units_sold_total
+	, ROUND(SUM (t.line_item_amount - (p.current_wholesale_price * t.quantity))::NUMERIC,2) as profit_dollars_total
+FROM transactions t
+JOIN product p
+ON t.product_id = p.product_id
 GROUP BY 1
 ORDER BY 1
 ;
 
---Top Line by product category ranked
+--Top Line by product category ranked CORRECTED
 SELECT p.product_category
 	, COUNT(DISTINCT CONCAT(t.transaction_id, t.transaction_date, t.sales_outlet_id)) as total_transactions
 	, SUM (t.line_item_amount) as dollars_sold_tot
 	, SUM (t.quantity) as units_sold_total
-	, SUM (t.line_item_amount - unit_price) as profit_dollars_total
+	, ROUND(SUM (t.line_item_amount - (p.current_wholesale_price * t.quantity))::NUMERIC,2) as profit_dollars_total
 FROM transactions t
 JOIN product p
 ON t.product_id = p.product_id
@@ -48,14 +52,16 @@ ORDER BY 3 DESC
 ;
 
 -- top line stats week over week
--- see weekly sales
+-- see weekly sales CORRECTEDa
 WITH weekly as 
 (SELECT EXTRACT ('week' FROM transaction_date) AS week
 	, COUNT(DISTINCT CONCAT(transaction_id, transaction_date, sales_outlet_id)) as total_transactions
-	, SUM (line_item_amount) as dollars_sold_tot
-	, SUM (quantity) as units_sold_total
-	, SUM (line_item_amount - unit_price) as profit_dollars_total
-FROM transactions
+	, SUM (t.line_item_amount) as dollars_sold_tot
+	, SUM (t.quantity) as units_sold_total
+	, ROUND(SUM (t.line_item_amount - (p.current_wholesale_price * t.quantity))::NUMERIC,2) as profit_dollars_total
+FROM transactions t
+JOIN product p
+ON t.product_id = p.product_id
 GROUP BY 1
 ORDER BY 1)
 
