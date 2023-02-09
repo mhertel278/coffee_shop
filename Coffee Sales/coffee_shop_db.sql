@@ -126,3 +126,8 @@ FROM sales_targets st
 			,('Merchandise',merchandise_goal)
 	) as u(category,goal)
 ORDER BY 1;
+
+--change staff table column names
+
+ALTER TABLE staff
+RENAME COLUMN "location" TO sales_outlet_id;
