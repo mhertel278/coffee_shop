@@ -171,3 +171,5 @@ ON pw.product_id = p.product_id
 GROUP BY 1,2,3
 ORDER BY 1,3
 ;
+
+

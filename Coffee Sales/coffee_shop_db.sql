@@ -131,3 +131,42 @@ ORDER BY 1;
 
 ALTER TABLE staff
 RENAME COLUMN "location" TO sales_outlet_id;
+
+/* update staff table sales_outlet_id to the store where each employee sells the most from
+as this store is likely their new home store
+*/
+--find each staffer's store of most transactions to become the new home store
+WITH trans_by_store AS (
+	SELECT t.staff_id
+
+	, CAST(t.sales_outlet_id AS VARCHAR(4)) as transaction_store--converting to string as that is the d type in staff table
+	, s.sales_outlet_id as home_store
+	, COUNT(DISTINCT CONCAT(t.transaction_id, t.transaction_date, t.sales_outlet_id)) as total_transactions
+FROM transactions t
+JOIN staff s
+ON t.staff_id = s.staff_id
+GROUP BY 1,2,3
+ORDER BY 1 ASC)
+, 
+-- find store each staffer sells the most from
+ranks as(
+	SELECT *
+		, RANK() OVER (PARTITION BY staff_id ORDER BY total_transactions DESC)
+	FROM trans_by_store)
+,
+--take top ranked store for each staffer as their new store 
+--only include staffers where top store is different than home store to update table later
+updaters AS (
+	SELECT staff_id
+	, transaction_store
+	, home_store
+FROM ranks
+WHERE RANK = 1 AND transaction_store != home_store)
+--update table
+UPDATE staff s
+	SET sales_outlet_id =
+		(SELECT transaction_store
+			FROM updaters u
+			WHERE u.staff_id = s.staff_id)
+WHERE staff_id IN (SELECT staff_id FROM updaters)
+;
