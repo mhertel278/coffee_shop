@@ -9,35 +9,96 @@ ORDER BY 1 ASC, 2 DESC
 
 ;
 
---Find staffers with most transactions
-SELECT t.staff_id
+--Find employee with the company the longest
+SELECT s.staff_id
 	, s.first_name
 	, s.last_name
+	, s.position
 	, s.start_date
-	, t.sales_outlet_id
-	, COUNT(DISTINCT CONCAT(t.transaction_id, t.transaction_date, t.sales_outlet_id)) as total_transactions
-FROM transactions t
-JOIN staff s
-ON t.staff_id = s.staff_id
+	, s.sales_outlet_id
+FROM staff s
+WHERE start_date = (SELECT MIN(start_date) 
+					FROM staff 
+					WHERE sales_outlet_id IN ('3','5','8'))--exclude office,warehouse,and stores with not sales data)
+;
+
+--Find employee who is newest
+SELECT s.staff_id
+	, s.first_name
+	, s.last_name
+	, s.position
+	, s.start_date
+	, s.sales_outlet_id
+FROM staff s
+WHERE start_date = (SELECT MAX(start_date) 
+					FROM staff 
+					WHERE sales_outlet_id IN ('3','5','8'))--exclude office,warehouse,and stores with not sales data)
+;
+
+--Does store with most experienced staff have most $
+WITH experience AS(
+	SELECT s.sales_outlet_id
+		, ROUND(AVG('2019-04-30'-s.start_date)) AS avg_exp_days	
+	FROM staff s
+	GROUP BY 1)
+,
+store_sales AS (
+	SELECT CAST(sales_outlet_id AS VARCHAR(4)) 
+		, SUM(line_item_amount) as total_dollars 
+	FROM transactions
+	GROUP BY 1)
+	
+SELECT ss.sales_outlet_id
+	, ss.total_dollars
+	, e.avg_exp_days
+FROM experience e
+JOIN store_sales ss
+ON e.sales_outlet_id = ss.sales_outlet_id
+ORDER BY 2 DESC
+;
+--Find staffers with most transactions
+SELECT s.staff_id
+	, s.first_name
+	, s.last_name
+	, s.position
+	, s.start_date
+	, COUNT(DISTINCT(CONCAT(t.transaction_id,t.transaction_date,t.sales_outlet_id))) as trans_count
+FROM staff s
+JOIN transactions t
+ON s.staff_id = t.staff_id
 GROUP BY 1,2,3,4,5
 ORDER BY 6 DESC
-LIMIT 5
+LIMIT 10
 ;
 
 --FIND staffers with most $ sold
 
-SELECT t.staff_id
+SELECT s.staff_id
 	, s.first_name
 	, s.last_name
-	, s.start_date
 	, s.position
-	, t.sales_outlet_id
+	, s.start_date
 	, SUM(t.line_item_amount) as total_sales_dollars
-FROM transactions t
-JOIN staff s
-ON t.staff_id = s.staff_id
-GROUP BY 1,2,3,4,5,6
-ORDER BY 7 DESC
+FROM staff s
+JOIN transactions t
+ON s.staff_id = t.staff_id
+GROUP BY 1,2,3,4,5
+ORDER BY 6 DESC
+LIMIT 10
+;
+
+-- find staffers with highest $ per trans (best at upselling?)
+SELECT s.staff_id
+	, s.first_name
+	, s.last_name
+	, s.position
+	, s.start_date
+	, ROUND(SUM(t.line_item_amount) / COUNT(DISTINCT(CONCAT(t.transaction_id,t.transaction_date,t.sales_outlet_id))),2) as dollars_per_trans
+FROM staff s
+JOIN transactions t
+ON s.staff_id = t.staff_id
+GROUP BY 1,2,3,4,5
+ORDER BY 6 DESC
 LIMIT 10
 ;
 
@@ -57,3 +118,5 @@ GROUP BY 1,2,3,4,5,6,7
 ORDER BY 1
 -- LIMIT 10
 ;
+
+--Find staffers with highest $ per trans
