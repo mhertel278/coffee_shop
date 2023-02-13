@@ -36,24 +36,27 @@ WHERE start_date = (SELECT MAX(start_date)
 ;
 
 --Does store with most experienced staff have most $
-WITH experience AS(
-	SELECT s.sales_outlet_id
-		, ROUND(AVG('2019-04-30'-s.start_date)) AS avg_exp_days	
-	FROM staff s
-	GROUP BY 1)
-,
-store_sales AS (
-	SELECT CAST(sales_outlet_id AS VARCHAR(4)) 
-		, SUM(line_item_amount) as total_dollars 
+--get store sales
+WITH sales AS(
+	SELECT sales_outlet_id::varchar(4)
+		, SUM(line_item_amount) as sales_dollars
 	FROM transactions
-	GROUP BY 1)
-	
-SELECT ss.sales_outlet_id
-	, ss.total_dollars
+	GROUP BY 1
+	)
+,
+--get stores avg experience
+experience AS (
+	SELECT 	sales_outlet_id
+		, ROUND(AVG('2019-04-30'-start_date)) AS avg_exp_days
+	FROM staff
+	GROUP BY 1
+)
+SELECT s.sales_outlet_id
+	, s.sales_dollars
 	, e.avg_exp_days
-FROM experience e
-JOIN store_sales ss
-ON e.sales_outlet_id = ss.sales_outlet_id
+FROM sales s
+JOIN experience e
+ON s.sales_outlet_id = e.sales_outlet_id
 ORDER BY 2 DESC
 ;
 --Find staffers with most transactions
@@ -87,6 +90,79 @@ ORDER BY 6 DESC
 LIMIT 10
 ;
 
+/*
+find rank by $_per of newest employee
+*/
+-- get dollars per transaction for each staff
+WITH staff_dpt AS(
+	SELECT s.staff_id
+		, s.first_name
+		, s.last_name
+		, s.position
+		, s.start_date
+		, ROUND(SUM(t.line_item_amount) / COUNT(DISTINCT(CONCAT(t.transaction_id,t.transaction_date,t.sales_outlet_id))),2) as dollars_per_trans
+	FROM staff s
+	JOIN transactions t
+	ON s.staff_id = t.staff_id
+	GROUP BY 1,2,3,4,5
+	)
+,
+-- rank staff
+ranked AS(
+	SELECT *
+	, RANK() OVER(ORDER BY dollars_per_trans DESC)
+	FROM staff_dpt
+	)
+, 
+-- get start date of newest employeet
+newest AS (
+	SELECT MAX(start_date) 
+			 FROM staff 
+			 WHERE sales_outlet_id IN ('3','5','8')
+)
+
+SELECT * 
+FROM ranked
+WHERE start_date = (SELECT * FROM newest)
+;
+
+/*
+find rank by $_per of newest employee
+*/
+-- get sales per staff
+WITH staff_sales AS(
+	SELECT s.staff_id
+		, s.first_name
+		, s.last_name
+		, s.position
+		, s.start_date
+		, SUM(t.line_item_amount) as total_sales_dollars
+	FROM staff s
+	JOIN transactions t
+	ON s.staff_id = t.staff_id
+	GROUP BY 1,2,3,4,5
+	)
+,
+-- rank staff
+ranked AS(
+	SELECT *
+	, RANK() OVER(ORDER BY total_sales_dollars DESC)
+	FROM staff_sales
+	)
+, 
+-- get start date of newest employeet
+newest AS (
+	SELECT MAX(start_date) 
+			 FROM staff 
+			 WHERE sales_outlet_id IN ('3','5','8')
+)
+
+SELECT * 
+FROM ranked
+WHERE start_date = (SELECT * FROM newest)
+;
+
+
 -- find staffers with highest $ per trans (best at upselling?)
 SELECT s.staff_id
 	, s.first_name
@@ -119,4 +195,3 @@ ORDER BY 1
 -- LIMIT 10
 ;
 
---Find staffers with highest $ per trans
