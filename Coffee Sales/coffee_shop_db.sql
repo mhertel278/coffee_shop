@@ -170,3 +170,20 @@ UPDATE staff s
 			WHERE u.staff_id = s.staff_id)
 WHERE staff_id IN (SELECT staff_id FROM updaters)
 ;
+
+/*
+Update product table, remove 'Sm','Rg','Lg' from drink product names to allow group by of coffee/tea type
+convert units in unit-of-measure column
+*/
+
+-- ensure update condition works 
+SELECT product
+	, REPLACE(REPLACE(REPLACE(REPLACE(product, ' Sm',''),' Rg',''), ' Lg',''), ' - Organic','')
+FROM product
+WHERE product LIKE '% Sm' 
+	OR product LIKE '% Rg'
+	OR product LIKE '% Lg'
+	OR product LIKE '% - Organic'
+;
+
+-- 
