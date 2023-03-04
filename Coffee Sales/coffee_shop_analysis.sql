@@ -12,6 +12,9 @@ SELECT * FROM row_counter
 WHERE row_count > 1
 ;
 
+--how many stores have sales
+SELECT DISTINCT sales_outlet_id
+FROM transactions
 
 /*
 High Level Analysis
@@ -53,25 +56,28 @@ ORDER BY 3 DESC
 
 -- top line stats week over week
 -- see weekly sales CORRECTEDa
-WITH weekly as 
-(SELECT EXTRACT ('week' FROM transaction_date) AS week
-	, COUNT(DISTINCT CONCAT(transaction_id, transaction_date, sales_outlet_id)) as total_transactions
-	, SUM (t.line_item_amount) as dollars_sold_tot
-	, SUM (t.quantity) as units_sold_total
-	, ROUND(SUM (t.line_item_amount - (p.current_wholesale_price * t.quantity))::NUMERIC,2) as profit_dollars_total
-FROM transactions t
-JOIN product p
-ON t.product_id = p.product_id
-GROUP BY 1
-ORDER BY 1)
+WITH weekly as (
+	SELECT EXTRACT ('week' FROM transaction_date) AS week
+		, COUNT(DISTINCT CONCAT(transaction_id, transaction_date, sales_outlet_id)) as total_transactions
+		, SUM (t.line_item_amount) as dollars_sold_tot
+		, SUM (t.quantity) as units_sold_total
+		, ROUND(SUM (t.line_item_amount - (p.current_wholesale_price * t.quantity))::NUMERIC,2) as profit_dollars_total
+	FROM transactions t
+	JOIN product p
+	ON t.product_id = p.product_id
+	GROUP BY 1
+	ORDER BY 1
+)
 
 SELECT week
+	, total_transactions
+	, ROUND(((total_transactions - LAG (total_transactions) OVER())::NUMERIC / total_transactions*100),1) AS trans_p
 	, dollars_sold_tot
-	, dollars_sold_tot - LAG (dollars_sold_tot,1) OVER() AS dollars_wow
+	, ROUND(((dollars_sold_tot - LAG (dollars_sold_tot) OVER())::NUMERIC / dollars_sold_tot*100),1) AS sales_dollars_pct_wow
 	, units_sold_total
-	, units_sold_total - LAG (units_sold_total,1) OVER() AS units_wow
+	, ROUND(((units_sold_total - LAG (units_sold_total) OVER())::NUMERIC / units_sold_total*100),1) AS units_pct_wow
 	, profit_dollars_total
-	, profit_dollars_total - LAG (profit_dollars_total,1) OVER() AS profit_wow
+	, ROUND(((profit_dollars_total - LAG (profit_dollars_total) OVER())::NUMERIC / profit_dollars_total*100),1) AS profit_pct_wow
 FROM weekly
 WHERE week != 18
 ;
@@ -82,13 +88,15 @@ grouping transactions by store and product group to join to
 unpivoted sales goals and calculate the actual vs goal
 */
 
-WITH category_sales as (SELECT t.sales_outlet_id
-	, p.product_group
-	, SUM(t.quantity) as units
-FROM transactions t
-JOIN product p
-ON t.product_id = p.product_id
-GROUP BY 1,2)
+WITH category_sales as (
+	SELECT t.sales_outlet_id
+		, p.product_group
+		, SUM(t.quantity) as units
+	FROM transactions t
+	JOIN product p
+	ON t.product_id = p.product_id
+	GROUP BY 1,2
+)
 
 SELECT c.sales_outlet_id 
 	, c.product_group
@@ -98,7 +106,7 @@ SELECT c.sales_outlet_id
 	, ROUND((c.units-t.goal)/t.goal::NUMERIC * 100,2) as act_vs_goal_perc
 FROM category_sales c
 INNER JOIN sales_targets_long t
-ON c.sales_outlet_id || c.product_group = t.sales_outlet_id || t.category
+ON c.sales_outlet_id || c.product_group = t.sales_outlet_id || t.product_group
 ORDER BY 1,2
 
 ;

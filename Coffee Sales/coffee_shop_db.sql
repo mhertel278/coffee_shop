@@ -110,12 +110,11 @@ CREATE TABLE staff (
 )
 ;
 
---unpivot targets table to allow joining to sales table
---later join code adapted from StackOverflow
--- https://stackoverflow.com/questions/64268037/unpivot-table-in-postgresql
--- on 1/26/2023
+--unpivot targets table to allow joining to sales table later 
+-- code adapted from StackOverflow
+-- https://stackoverflow.com/questions/64268037/unpivot-table-in-postgresql on 1/26/2023
 SELECT st.sales_outlet_id
-	, u.category
+	, u.product_group
 	, u.goal
 INTO sales_targets_long
 FROM sales_targets st
@@ -124,7 +123,7 @@ FROM sales_targets st
 			,('Beverages',beverage_goal)
 			,('Food',food_goal)
 			,('Merchandise',merchandise_goal)
-	) as u(category,goal)
+	) as u(product_group,goal)
 ORDER BY 1;
 
 --change staff table column names
