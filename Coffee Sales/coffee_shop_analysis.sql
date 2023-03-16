@@ -19,7 +19,7 @@ FROM transactions
 /*
 High Level Analysis
 */
--- Top line totals CORRECTED
+-- Question 1. What are the KPI values company wide?
 SELECT COUNT(DISTINCT CONCAT(t.transaction_id, t.transaction_date, t.sales_outlet_id)) as total_transactions
 	, SUM (t.line_item_amount) as dollars_sold_tot
 	, SUM (t.quantity) as units_sold_total
@@ -54,8 +54,7 @@ GROUP BY 1
 ORDER BY 3 DESC
 ;
 
--- top line stats week over week
--- see weekly sales CORRECTEDa
+-- Question 2. What is the week over week change in KPIs throughout the month?
 WITH weekly as (
 	SELECT EXTRACT ('week' FROM transaction_date) AS week
 		, COUNT(DISTINCT CONCAT(transaction_id, transaction_date, sales_outlet_id)) as total_transactions
@@ -97,7 +96,6 @@ WITH category_sales as (
 	ON t.product_id = p.product_id
 	GROUP BY 1,2
 )
-
 SELECT c.sales_outlet_id 
 	, c.product_group
 	, c.units
@@ -108,8 +106,37 @@ FROM category_sales c
 INNER JOIN sales_targets_long t
 ON c.sales_outlet_id || c.product_group = t.sales_outlet_id || t.product_group
 ORDER BY 1,2
-
 ;
+
+-- Company wide actual vs target by group
+WITH group_sales as (
+	SELECT p.product_group
+		, SUM(t.quantity) as units
+	FROM transactions t
+	JOIN product p
+	ON t.product_id = p.product_id
+	WHERE t.sales_outlet_id IN (3,5,8)
+	GROUP BY 1
+)
+,
+group_targets AS(
+	SELECT product_group
+		, SUM (goal) AS goal
+	FROM sales_targets_long
+	WHERE sales_outlet_id in (3,5,8)
+	GROUP BY 1
+)
+SELECT gs.product_group
+	, gs.units
+	, gt.goal
+	,(gs.units-gt.goal) AS act_vs_goal
+	, ROUND((gs.units-gt.goal)/gt.goal::NUMERIC * 100,2) as act_vs_goal_perc
+FROM group_sales gs
+INNER JOIN group_targets gt
+ON gs.product_group = gt.product_group
+ORDER BY 1
+;
+
 
 /* 
 Analyze pastry waste

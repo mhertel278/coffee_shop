@@ -29,3 +29,12 @@ FROM customer c
 INNER JOIN transactions t
 ON c.customer_id = t.customer_id
 GROUP BY 1
+
+--money spent per transaction by loyalty vs non-loyalty
+
+--money per transaction by age group
+
+--money spent by age group
+
+--frequency of visit by loyalty 
+
