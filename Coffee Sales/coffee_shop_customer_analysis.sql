@@ -31,6 +31,30 @@ ON c.customer_id = t.customer_id
 GROUP BY 1
 
 --money spent per transaction by loyalty vs non-loyalty
+WITH cust_ids AS (
+	SELECT 
+		customer_id 
+	FROM 
+		customer
+)
+
+SELECT 
+	'loyalty' AS cust_type
+	, ROUND(SUM(line_item_amount)/ COUNT(DISTINCT CONCAT(transaction_id,transaction_date,sales_outlet_id)),2) as dollars_per_trans
+FROM
+	transactions
+WHERE 
+	customer_id IN (SELECT * FROM cust_ids)
+GROUP BY 1
+UNION
+SELECT 
+	'non-loyalty' AS cust_type
+	, ROUND(SUM(line_item_amount)/ COUNT(DISTINCT CONCAT(transaction_id,transaction_date,sales_outlet_id)),2) as dollars_per_trans
+FROM
+	transactions
+WHERE 
+	customer_id NOT IN (SELECT * FROM cust_ids)
+;	
 
 --money per transaction by age group
 
